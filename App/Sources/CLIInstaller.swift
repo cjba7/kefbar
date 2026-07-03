@@ -7,8 +7,8 @@ import Foundation
 
 /// The one privileged operation (SPEC §12): symlink the CLI bundled at
 /// `kefbar.app/Contents/Helpers/kefbar` into `/usr/local/bin`. Uses `osascript`
-/// `with administrator privileges`, so macOS shows its native password prompt —
-/// the app never handles the password. If declined, the CLI still runs via its
+/// `with administrator privileges`, so macOS shows its native password prompt,
+/// and the app never handles the password. If declined, the CLI still runs via its
 /// full bundle path.
 enum CLIInstaller {
     static let linkPath = "/usr/local/bin/kefbar"

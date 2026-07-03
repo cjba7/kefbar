@@ -6,7 +6,7 @@
 import Foundation
 import KEFKit
 
-/// Lightweight file log (agents have nowhere to print) — set `KEFBAR_APP_LOG=1`.
+/// Lightweight file log (agents have nowhere to print). Set `KEFBAR_APP_LOG=1`.
 enum AppLog {
     private static let enabled = ProcessInfo.processInfo.environment["KEFBAR_APP_LOG"] == "1"
     private static let url = URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("kefbar-app.log")
@@ -21,8 +21,8 @@ enum AppLog {
     }
 }
 
-/// App-wide state (SPEC §9). `@MainActor` so every `@Published` mutation — including
-/// those arriving from the event-poll loop — happens on the main thread. The app owns
+/// App-wide state (SPEC §9). `@MainActor` so every `@Published` mutation, including
+/// those arriving from the event-poll loop, happens on the main thread. The app owns
 /// config writes (the CLI is read-only).
 @MainActor
 final class SpeakerStore: ObservableObject {

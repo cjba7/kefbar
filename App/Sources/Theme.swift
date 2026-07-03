@@ -9,7 +9,7 @@ import SwiftUI
 /// The four Tailwind "Oatmeal" neutral ramps (mauve / olive / mist / taupe),
 /// stored as the exact oklch scales promoted into Tailwind CSS v4.3 core. Each
 /// entry is (L 0…1, C, H°) for shades 50, 100, 200, 300, 400, 500, 600, 700,
-/// 800, 900, 950 — converted to sRGB at build-of-view time by `Color(oklchL:c:h:)`.
+/// 800, 900, 950, converted to sRGB at build-of-view time by `Color(oklchL:c:h:)`.
 enum Palette: String, CaseIterable, Identifiable {
     case mauve, olive, mist, taupe
 

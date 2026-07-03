@@ -8,7 +8,7 @@ import ServiceManagement
 import SwiftUI
 
 /// App-level preferences (SPEC §9). Launch-at-login via `SMAppService` (no sudo,
-/// no helper). Plus the UI preferences — Oatmeal palette and appearance mode —
+/// no helper). Plus the UI preferences (Oatmeal palette and appearance mode),
 /// persisted in `UserDefaults` (the CLI doesn't care about theming, so these
 /// stay app-only rather than in the shared config).
 @MainActor
@@ -32,7 +32,7 @@ final class AppSettings: ObservableObject {
         palette = Palette(rawValue: defaults.string(forKey: Keys.palette) ?? "") ?? .olive
         appearance = AppearanceMode(rawValue: defaults.string(forKey: Keys.appearance) ?? "") ?? .system
         launchAtLogin = (SMAppService.mainApp.status == .enabled)
-        // Agent app: LSUIElement in Info.plist keeps us out of the Dock — no
+        // Agent app: LSUIElement in Info.plist keeps us out of the Dock, with no
         // activation-policy juggling now that "Show in Dock" is gone.
     }
 

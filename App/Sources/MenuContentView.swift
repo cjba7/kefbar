@@ -7,8 +7,8 @@ import AppKit
 import SwiftUI
 
 /// The MenuBarExtra panel: a calm, editorial control surface. One row per
-/// configured speaker — the volume value set as the hero in a serif face,
-/// paired with a quiet fader — plus a slim footer. Rescan lives in Settings now.
+/// configured speaker: the volume value set as the hero in a serif face,
+/// paired with a quiet fader, plus a slim footer. Rescan lives in Settings now.
 struct MenuContentView: View {
     @ObservedObject var store: SpeakerStore
     @ObservedObject var settings: AppSettings

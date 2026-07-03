@@ -105,7 +105,7 @@ private struct SpeakersTab: View {
             VStack(alignment: .leading, spacing: 14) {
                 SectionLabel(text: "Configured", theme: theme)
                 if store.speakers.isEmpty {
-                    Caption(text: "None yet — scan below and add your speakers.", theme: theme)
+                    Caption(text: "None yet. Scan below and add your speakers.", theme: theme)
                 } else {
                     VStack(spacing: 8) {
                         ForEach(store.speakers) { vm in
@@ -184,7 +184,7 @@ private struct CLITab: View {
             VStack(alignment: .leading, spacing: 14) {
                 SectionLabel(text: "Command-line tool", theme: theme)
 
-                Text("Control your speakers from the terminal — or a hardware key. Wire a knob, Stream Deck, or keyboard shortcut to `kefbar up 3` / `kefbar down 3` with Logi Options+, BetterTouchTool, or Keyboard Maestro.")
+                Text("Control your speakers from a terminal, or a hardware key. Wire a knob, Stream Deck, or keyboard shortcut to `kefbar up 3` / `kefbar down 3` with Logi Options+, BetterTouchTool, or Keyboard Maestro.")
                     .font(.system(size: 14, design: .serif))
                     .foregroundStyle(theme.inkSoft)
                     .lineSpacing(3)
@@ -212,7 +212,7 @@ private struct CLITab: View {
                 }
 
                 if CLIInstaller.bundledCLI == nil {
-                    Caption(text: "Run from the built kefbar.app to install — the CLI ships inside the bundle.", theme: theme)
+                    Caption(text: "Run from the built kefbar.app to install. The CLI ships inside the bundle.", theme: theme)
                 }
                 if let note { Caption(text: note, theme: theme) }
 
@@ -243,7 +243,7 @@ private struct CLITab: View {
             await MainActor.run {
                 busy = false
                 installed = CLIInstaller.isInstalled
-                note = failed ? "That didn't finish — you can try again." : nil
+                note = failed ? "That didn't finish. Try again." : nil
             }
         }
     }
@@ -263,7 +263,7 @@ private struct UITab: View {
 
                 SectionLabel(text: "Appearance", theme: theme)
                 AppearanceChooser(selection: $settings.appearance, theme: theme).frame(maxWidth: 360)
-                Caption(text: "Match macOS follows your system — slipping into dark in the evening.", theme: theme)
+                Caption(text: "Match macOS follows your system, slipping into dark in the evening.", theme: theme)
             }
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
