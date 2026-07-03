@@ -3,36 +3,135 @@
 //
 // This file is part of kefbar.
 
+import AppKit
 import KEFKit
 import SwiftUI
 
 /// The Settings scene (SPEC §9), reorganised into four clearly separated tabs:
-/// Speakers · General · CLI · UI. The window is resizable (min 350×280); its
-/// content is themed with the selected Oatmeal palette and appearance.
+/// Speakers · General · CLI · UI. A custom underlined tab bar (matching the
+/// design concept, not the stock TabView chrome) sits above themed content. The
+/// window is made resizable with a minimum size via its NSWindow.
 struct SettingsView: View {
     @ObservedObject var store: SpeakerStore
     @ObservedObject var settings: AppSettings
     @Environment(\.colorScheme) private var envScheme
+    @State private var tab: SettingsTab = .speakers
 
     private var theme: Theme {
         Theme(palette: settings.palette, scheme: settings.appearance.colorScheme ?? envScheme)
     }
 
     var body: some View {
-        TabView {
-            SpeakersTab(store: store, theme: theme)
-                .tabItem { Label("Speakers", systemImage: "hifispeaker.2") }
-            GeneralTab(settings: settings, theme: theme)
-                .tabItem { Label("General", systemImage: "gearshape") }
-            CLITab(store: store, theme: theme)
-                .tabItem { Label("CLI", systemImage: "terminal") }
-            UITab(settings: settings, theme: theme)
-                .tabItem { Label("UI", systemImage: "paintpalette") }
+        VStack(spacing: 0) {
+            SettingsTabBar(selection: $tab, theme: theme)
+            Rectangle().fill(theme.line).frame(height: 1)
+            content.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
-        .frame(minWidth: 350, idealWidth: 470, maxWidth: .infinity,
-               minHeight: 280, idealHeight: 440, maxHeight: .infinity)
+        .frame(minWidth: 380, idealWidth: 500, maxWidth: .infinity,
+               minHeight: 280, idealHeight: 460, maxHeight: .infinity)
         .background(theme.ground)
+        .background(SettingsWindowConfigurator(
+            minSize: CGSize(width: 380, height: 280),
+            defaultSize: CGSize(width: 500, height: 460),
+            title: "kefbar Settings"))
     }
+
+    @ViewBuilder private var content: some View {
+        switch tab {
+        case .speakers: SpeakersTab(store: store, theme: theme)
+        case .general: GeneralTab(settings: settings, theme: theme)
+        case .cli: CLITab(store: store, theme: theme)
+        case .ui: UITab(settings: settings, theme: theme)
+        }
+    }
+}
+
+// MARK: - Custom tab bar
+
+enum SettingsTab: String, CaseIterable, Identifiable {
+    case speakers, general, cli, ui
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .speakers: return "Speakers"
+        case .general: return "General"
+        case .cli: return "CLI"
+        case .ui: return "UI"
+        }
+    }
+    var symbol: String {
+        switch self {
+        case .speakers: return "hifispeaker.2"
+        case .general: return "gearshape"
+        case .cli: return "terminal"
+        case .ui: return "paintpalette"
+        }
+    }
+}
+
+private struct SettingsTabBar: View {
+    @Binding var selection: SettingsTab
+    let theme: Theme
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(SettingsTab.allCases) { t in
+                let selected = t == selection
+                Button { selection = t } label: {
+                    HStack(spacing: 7) {
+                        Image(systemName: t.symbol).font(.system(size: 13))
+                        Text(t.label).font(.system(size: 13, weight: .medium))
+                    }
+                    .foregroundStyle(selected ? theme.ink : theme.inkSoft)
+                    .padding(.horizontal, 12).padding(.vertical, 11)
+                    .overlay(alignment: .bottom) {
+                        Rectangle().fill(selected ? theme.accent : Color.clear).frame(height: 2)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(selected ? [.isSelected] : [])
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 10)
+        .padding(.top, 6)
+        .background(theme.panel)
+    }
+}
+
+/// Reaches the hosting NSWindow to make the Settings window resizable with a
+/// minimum size — SwiftUI's Settings scene otherwise ships fixed-size — and set
+/// its title (the custom tab bar replaces the TabView that used to title it).
+private struct SettingsWindowConfigurator: NSViewRepresentable {
+    let minSize: CGSize
+    let defaultSize: CGSize
+    let title: String
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView(frame: .zero)
+        func configure() {
+            guard let window = view.window else { return }
+            window.styleMask.insert(.resizable)
+            window.minSize = minSize
+            window.title = title
+        }
+        DispatchQueue.main.async {
+            configure()
+            if !context.coordinator.sized, let window = view.window {
+                context.coordinator.sized = true
+                window.setContentSize(defaultSize)
+            }
+        }
+        // SwiftUI re-applies its own style mask as the Settings window finishes
+        // setting up, stripping .resizable; re-assert it just after so it sticks.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { configure() }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {}
+    func makeCoordinator() -> Coordinator { Coordinator() }
+    final class Coordinator { var sized = false }
 }
 
 // MARK: - Tabs
@@ -199,7 +298,6 @@ private struct UITab: View {
             VStack(alignment: .leading, spacing: 14) {
                 SectionLabel(text: "Palette", theme: theme)
                 PaletteChooser(selection: $settings.palette, theme: theme)
-                Caption(text: "Colours from the Tailwind Oatmeal palette — a calm, near-neutral warm ramp.", theme: theme)
 
                 Rectangle().fill(theme.line).frame(height: 1).padding(.vertical, 4)
 

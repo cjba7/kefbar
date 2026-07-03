@@ -24,6 +24,6 @@ struct KefbarApp: App {
             SettingsView(store: store, settings: settings)
                 .preferredColorScheme(settings.appearance.colorScheme)
         }
-        .windowResizability(.contentMinSize)
+        .windowResizability(.contentSize)
     }
 }

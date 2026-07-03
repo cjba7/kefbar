@@ -14,7 +14,16 @@ enum Palette: String, CaseIterable, Identifiable {
     case mauve, olive, mist, taupe
 
     var id: String { rawValue }
-    var label: String { rawValue.capitalized }
+
+    /// Display name (the rawValue stays mauve/olive/mist/taupe for stable persistence).
+    var label: String {
+        switch self {
+        case .mauve: return "Lavender"
+        case .olive: return "Dark Olive"
+        case .mist: return "Sea Grey"
+        case .taupe: return "Brown Olive"
+        }
+    }
 
     var ramp: [(l: Double, c: Double, h: Double)] {
         switch self {
