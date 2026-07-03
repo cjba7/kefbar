@@ -184,6 +184,14 @@ private struct CLITab: View {
             VStack(alignment: .leading, spacing: 14) {
                 SectionLabel(text: "Command-line tool", theme: theme)
 
+                Text("Control your speakers from the terminal — or a hardware key. Wire a knob, Stream Deck, or keyboard shortcut to `kefbar up 3` / `kefbar down 3` with Logi Options+, BetterTouchTool, or Keyboard Maestro.")
+                    .font(.system(size: 14, design: .serif))
+                    .foregroundStyle(theme.inkSoft)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Rectangle().fill(theme.line).frame(height: 1).padding(.vertical, 2)
+
                 SettingRow(
                     title: installed ? "kefbar is installed" : "Install kefbar in your PATH",
                     subtitle: "Links the bundled tool to /usr/local/bin. Asks for your password once.",
@@ -217,14 +225,6 @@ private struct CLITab: View {
                 ) {
                     ThemedStepper(value: store.cliStep, range: 1...10, theme: theme) { store.setCliStep($0) }
                 }
-
-                Text("Wire hardware keys to `kefbar up 3` / `kefbar down 3` from Logi Options+, BetterTouchTool, or Keyboard Maestro.")
-                    .font(.system(size: 11.5))
-                    .foregroundStyle(theme.inkSoft)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(theme.inset, in: RoundedRectangle(cornerRadius: 10))
             }
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)

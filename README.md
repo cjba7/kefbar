@@ -1,125 +1,110 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 # kefbar
 
-A tiny, open-source macOS app + CLI to control the volume of **KEF W2-platform**
-wireless speakers (LSX II, LSX II LT, LS50 Wireless II, LS60 Wireless) from the
-menu bar and the command line. No cloud, no KEF Connect app, no remote — just the
-speaker's own local HTTP API on your LAN.
+**Control your KEF speakers' volume from the macOS menu bar.**
 
-See [`SPEC.md`](SPEC.md) for the full design.
+A tiny, calm menu-bar app — with an optional command-line tool — for [KEF][kef]
+wireless speakers (LSX II, LS50 Wireless II, LS60 Wireless, and other W2-platform
+models). It talks straight to the speaker on your own network: no cloud, no account,
+no KEF Connect app.
 
-## Status
+<p align="center">
+  <img src="docs/screenshots/panel.png" alt="kefbar menu-bar panel" width="340">
+</p>
 
-| Milestone | Scope | State |
-|-----------|-------|-------|
-| **M0** | `KEFKit` library (HTTP client, config, mock server) | ✅ done |
-| **M1** | `kefbar` CLI (get/set/up/down/mute/unmute/status/list) | ✅ done |
-| **M2** | Bonjour + subnet discovery (`kefbar discover`) | ✅ done |
-| **M3** | Menu-bar app (`MenuBarExtra`, live sliders) | ✅ done |
-| M4 | DMG packaging, embedded CLI, notarize | ⏳ next |
+## Why
 
-The API paths, write method (POST), model/firmware source (`settings:/releasetext`),
-and Bonjour service types were verified against a live LSX II before implementation.
+You just want to nudge the volume — and reaching for a phone app or the remote is
+friction. kefbar puts a fader and mute one click away in the menu bar, keeps in sync
+when the volume changes elsewhere, and can bind to a hardware knob or key.
+
+## Features
+
+- **Volume &amp; mute** per speaker, with a live fader and the level shown large.
+- **Power at a glance** — a Uni-Q status ring shows on / standby / unreachable.
+- **Several speakers** — each on its own row; standby ones dim.
+- **Stays in sync** — change the volume from the remote or KEF Connect and the fader follows.
+- **Make it yours** — four calm palettes and Light / Dark / Match-macOS appearance.
+- **Command line** — a `kefbar` tool for scripts and hardware keys.
+
+## Install
+
+1. Download **`kefbar-<version>.dmg`** from [Releases][releases].
+2. Open it and drag **kefbar** to **Applications**.
+3. First launch: right-click the app → **Open** (it isn't notarized yet, so Gatekeeper
+   asks once).
+4. Click **Allow** when macOS asks for **Local Network** access — kefbar needs it to
+   reach your speaker.
+
+kefbar lives in the menu bar, not the Dock. Turn on **Launch at login** in Settings to
+keep it there.
+
+## Using it
+
+Click the speaker icon in the menu bar:
+
+- Drag the fader to set the volume; click the speaker glyph to mute / unmute.
+- The Uni-Q ring shows power — lit when on, faint on standby, amber if unreachable.
+- Open **Settings…** to add speakers and change the look.
+
+### Settings
+
+<p align="center">
+  <img src="docs/screenshots/settings.png" alt="kefbar Settings" width="520">
+</p>
+
+Four tabs:
+
+- **Speakers** — **Rescan** to find speakers on your network, then **Add**, rename, set a
+  default, or remove.
+- **General** — Launch at login.
+- **CLI** — install the command-line tool and set its default step.
+- **UI** — pick a palette (Lavender · Dark Olive · Sea Grey · Brown Olive) and appearance.
+
+## Command line (optional)
+
+Handy for wiring volume to a hardware knob, Stream Deck, or keyboard shortcut. Install it
+from **Settings → CLI → Install CLI**, then:
+
+```sh
+kefbar get                # current volume (0–100)
+kefbar set 30             # set an absolute volume
+kefbar up 3               # raise by 3
+kefbar down 3             # lower by 3
+kefbar mute               # mute (remembers the level)
+kefbar unmute             # restore it
+kefbar status             # model, power, volume, firmware
+kefbar list               # your configured speakers
+kefbar discover           # find speakers on the network
+```
+
+Flags: `--speaker <name>` · `--host <ip>` · `--json`.
+
+**Bind to hardware keys** — point Logi Options+, BetterTouchTool, Keyboard Maestro, or a
+Stream Deck at `/usr/local/bin/kefbar up 3` (or `down 3`). Rapid taps are safe: they
+serialise, so five quick presses sum correctly instead of racing. The first time a
+launcher app runs `kefbar`, grant **that app** Local Network access too.
 
 ## Requirements
 
 - macOS 13 (Ventura) or later
-- Xcode / Swift toolchain (Swift 5.9+)
+- A KEF **W2-platform** speaker on your network: LSX II, LSX II LT, LS50 Wireless II,
+  or LS60 Wireless.
 
-## Build
-
-```sh
-make release          # optimised build -> .build/release/kefbar
-make test             # run unit tests
-make install          # copy the CLI into /usr/local/bin (may prompt for sudo)
-```
-
-Or directly: `swift build -c release`, `swift test`.
-
-## CLI usage
-
-```
-kefbar get                     # current volume (0-100)
-kefbar set 30                  # absolute volume (clamped to the speaker's maxVolume)
-kefbar up   [step]             # relative; step defaults to cliStep (5), max 10
-kefbar down [step]
-kefbar mute                    # volume 0, remembers the prior level
-kefbar unmute                  # restore the pre-mute level
-kefbar status                  # model, name, power, volume, firmware
-kefbar list                    # configured speakers (default marked with *)
-```
-
-Flags: `--speaker <name>` · `--host <ip>` · `--step <n>` · `--json`
-
-**Speaker selection:** `--host` wins; else `--speaker <name>`; else the configured
-default; else the sole configured speaker; else an error asking you to choose.
-
-**Exit codes:** `0` success · `2` usage/resolution · `3` unreachable ·
-`4` firmware too old (write unsupported). Old-firmware writes still succeed via a
-legacy path and print a one-line warning to stderr (exit stays `0`).
+## Build from source
 
 ```sh
-kefbar --host 192.168.1.114 set 25
-kefbar --host 192.168.1.114 up 3
-kefbar --speaker "Living Room" get --json      # -> {"volume":25}
+make app        # build kefbar.app into ./build
+make dmg        # package a drag-to-Applications DMG
+make test       # run the unit tests
+make release    # just the CLI -> .build/release/kefbar
 ```
 
-### ⚠️ macOS Local Network permission (macOS 15+)
-
-Reaching a speaker on your LAN requires **Local Network** permission (System
-Settings → Privacy & Security → Local Network). The first time you run `kefbar`
-from Terminal, macOS prompts once — click **Allow**. When a launcher app (Logi
-Options+, Stream Deck, BetterTouchTool, Keyboard Maestro) runs `kefbar`, grant
-**that app** Local Network access. The menu-bar app (M3) will request this
-automatically. Without it you'll see `network error … offline` even though the
-speaker is reachable.
-
-## Hardware buttons
-
-The CLI is the integration surface. Examples:
-
-- **Logi Options+** → launch a `.command` file containing `kefbar up 3`.
-- **Stream Deck / BetterTouchTool / Keyboard Maestro** → run a shell command:
-  `/usr/local/bin/kefbar up 3` (or `down 3`, `mute`, …).
-
-Rapid taps are safe: relative `up`/`down` serialise through an `flock` lockfile, so
-five quick `kefbar up` presses sum correctly instead of racing.
-
-## Configuration
-
-Shared by the app and CLI at
-`~/Library/Application Support/kefbar/config.json` (the app writes it; the CLI only
-reads it). Speakers are keyed by MAC so a DHCP address change self-heals.
-
-```jsonc
-{
-  "version": 1,
-  "defaultSpeakerId": "84:17:15:03:CD:9E",
-  "cliStep": 5,
-  "speakers": [
-    {
-      "id": "84:17:15:03:CD:9E",
-      "name": "Living Room",
-      "host": "192.168.1.114",
-      "model": "LSXII",
-      "maxVolume": 100,
-      "firmware": "V30137"
-    }
-  ]
-}
-```
-
-Run `kefbar discover` to find speakers on the LAN (it prints them and does **not**
-modify config); add them by hand or via the app, or drive the CLI directly with `--host`.
-
-## Testing without hardware
-
-```sh
-make mock          # mock KEF speaker on 127.0.0.1:8080
-kefbar --host 127.0.0.1:8080 status
-make mock-legacy   # simulate old GET-only firmware (exercises the fallback warning)
-```
+See [`SPEC.md`](SPEC.md) for the full design.
 
 ## License
 
-GPL-3.0-or-later. See [`LICENSE`](LICENSE).
+[GPL-3.0-or-later](LICENSE).
+
+[kef]: https://www.kef.com/
+[releases]: https://github.com/cjba7/kefbar/releases
