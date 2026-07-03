@@ -73,8 +73,8 @@ app:
 	@echo "built $(APP_BUNDLE) — launch with: open $(APP_BUNDLE)"
 
 ## drag-to-Applications DMG — milestone M4
-dmg:
-	@echo "dmg packaging: milestone M4 (not yet implemented)"
+dmg: app
+	bash scripts/make_dmg.sh "$(APP_BUNDLE)"
 
 ## remove build products
 clean:
