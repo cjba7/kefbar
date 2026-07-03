@@ -6,91 +6,220 @@
 import KEFKit
 import SwiftUI
 
-/// The Settings scene (SPEC §9): manage configured speakers, add discovered ones,
-/// and app preferences (launch-at-login, show-in-Dock, CLI step).
+/// The Settings scene (SPEC §9), reorganised into four clearly separated tabs:
+/// Speakers · General · CLI · UI. The window is resizable (min 350×280); its
+/// content is themed with the selected Oatmeal palette and appearance.
 struct SettingsView: View {
     @ObservedObject var store: SpeakerStore
     @ObservedObject var settings: AppSettings
+    @Environment(\.colorScheme) private var envScheme
+
+    private var theme: Theme {
+        Theme(palette: settings.palette, scheme: settings.appearance.colorScheme ?? envScheme)
+    }
 
     var body: some View {
         TabView {
-            speakersTab.tabItem { Label("Speakers", systemImage: "hifispeaker.2") }
-            generalTab.tabItem { Label("General", systemImage: "gearshape") }
+            SpeakersTab(store: store, theme: theme)
+                .tabItem { Label("Speakers", systemImage: "hifispeaker.2") }
+            GeneralTab(settings: settings, theme: theme)
+                .tabItem { Label("General", systemImage: "gearshape") }
+            CLITab(store: store, theme: theme)
+                .tabItem { Label("CLI", systemImage: "terminal") }
+            UITab(settings: settings, theme: theme)
+                .tabItem { Label("UI", systemImage: "paintpalette") }
         }
-        .frame(width: 520, height: 420)
-        .padding()
-    }
-
-    // MARK: - Speakers
-
-    private var speakersTab: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Configured").font(.headline)
-            if store.speakers.isEmpty {
-                Text("None yet — scan below and click Add.")
-                    .font(.callout).foregroundStyle(.secondary)
-            } else {
-                ForEach(store.speakers) { vm in
-                    ConfiguredRow(
-                        vm: vm,
-                        isDefault: store.defaultSpeakerId == vm.id,
-                        onRename: { store.rename(id: vm.id, to: $0) },
-                        onSetHost: { store.setHost(id: vm.id, host: $0) },
-                        onMakeDefault: { store.setDefault(id: vm.id) },
-                        onRemove: { store.remove(id: vm.id) })
-                }
-            }
-
-            Divider().padding(.vertical, 4)
-
-            HStack {
-                Text("Discovered").font(.headline)
-                Spacer()
-                Button(store.isScanning ? "Scanning…" : "Rescan") { store.rescan() }
-                    .disabled(store.isScanning)
-            }
-            if store.discovered.isEmpty {
-                Text("Click Rescan to find KEF speakers on your network.")
-                    .font(.callout).foregroundStyle(.secondary)
-            } else {
-                ForEach(store.discovered, id: \.mac) { d in
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text(d.name.isEmpty ? d.model : d.name)
-                            Text("\(d.host) · \(d.model)").font(.caption).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        let added = store.speakers.contains { $0.id.caseInsensitiveCompare(d.mac) == .orderedSame }
-                        Button(added ? "Added" : "Add") { store.add(d) }.disabled(added)
-                    }
-                }
-            }
-            Spacer()
-        }
-    }
-
-    // MARK: - General
-
-    private var generalTab: some View {
-        Form {
-            Toggle("Launch at login", isOn: Binding(
-                get: { settings.launchAtLogin }, set: { settings.setLaunchAtLogin($0) }))
-            Toggle("Show in Dock", isOn: Binding(
-                get: { settings.showInDock }, set: { settings.setShowInDock($0) }))
-            Divider()
-            Stepper("CLI default step: \(store.cliStep)", value: Binding(
-                get: { store.cliStep }, set: { store.setCliStep($0) }), in: 1...10)
-            Text("Used by `kefbar up` / `kefbar down` when no step is given.")
-                .font(.caption).foregroundStyle(.secondary)
-        }
-        .padding(.top, 8)
+        .frame(minWidth: 350, idealWidth: 470, maxWidth: .infinity,
+               minHeight: 280, idealHeight: 440, maxHeight: .infinity)
+        .background(theme.ground)
     }
 }
 
-/// One configured speaker with in-place rename / IP edit / default / remove.
+// MARK: - Tabs
+
+private struct SpeakersTab: View {
+    @ObservedObject var store: SpeakerStore
+    let theme: Theme
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                SectionLabel(text: "Configured", theme: theme)
+                if store.speakers.isEmpty {
+                    Caption(text: "None yet — scan below and add your speakers.", theme: theme)
+                } else {
+                    VStack(spacing: 8) {
+                        ForEach(store.speakers) { vm in
+                            ConfiguredRow(
+                                vm: vm, isDefault: store.defaultSpeakerId == vm.id, theme: theme,
+                                onRename: { store.rename(id: vm.id, to: $0) },
+                                onSetHost: { store.setHost(id: vm.id, host: $0) },
+                                onMakeDefault: { store.setDefault(id: vm.id) },
+                                onRemove: { store.remove(id: vm.id) })
+                        }
+                    }
+                }
+
+                Rectangle().fill(theme.line).frame(height: 1).padding(.vertical, 2)
+
+                HStack {
+                    SectionLabel(text: "Discovered", theme: theme)
+                    Spacer()
+                    Button(store.isScanning ? "Scanning…" : "Rescan") { store.rescan() }
+                        .buttonStyle(QuietButtonStyle(theme: theme, small: true))
+                        .disabled(store.isScanning)
+                }
+                if store.discovered.isEmpty {
+                    Caption(text: "Click Rescan to find KEF speakers on your network.", theme: theme)
+                } else {
+                    VStack(spacing: 6) {
+                        ForEach(store.discovered, id: \.mac) { d in
+                            DiscoveredRow(
+                                d: d,
+                                added: store.speakers.contains { $0.id.caseInsensitiveCompare(d.mac) == .orderedSame },
+                                theme: theme,
+                                onAdd: { store.add(d) })
+                        }
+                    }
+                }
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
+private struct GeneralTab: View {
+    @ObservedObject var settings: AppSettings
+    let theme: Theme
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                SectionLabel(text: "Startup", theme: theme)
+                SettingRow(
+                    title: "Launch at login",
+                    subtitle: "Start kefbar automatically when you sign in.",
+                    theme: theme
+                ) {
+                    Toggle("", isOn: Binding(
+                        get: { settings.launchAtLogin }, set: { settings.setLaunchAtLogin($0) }))
+                        .toggleStyle(.switch).labelsHidden().tint(theme.accent)
+                }
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
+private struct CLITab: View {
+    @ObservedObject var store: SpeakerStore
+    let theme: Theme
+    @State private var installed = CLIInstaller.isInstalled
+    @State private var busy = false
+    @State private var note: String?
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                SectionLabel(text: "Command-line tool", theme: theme)
+
+                SettingRow(
+                    title: installed ? "kefbar is installed" : "Install kefbar in your PATH",
+                    subtitle: "Links the bundled tool to /usr/local/bin. Asks for your password once.",
+                    theme: theme
+                ) {
+                    HStack(spacing: 8) {
+                        if busy { ProgressView().controlSize(.small) }
+                        if installed {
+                            Button("Uninstall") { run { try CLIInstaller.uninstall() } }
+                                .buttonStyle(QuietButtonStyle(theme: theme))
+                        } else {
+                            Button("Install CLI") { run { try CLIInstaller.install() } }
+                                .buttonStyle(PrimaryButtonStyle(theme: theme))
+                                .disabled(CLIInstaller.bundledCLI == nil)
+                        }
+                    }
+                    .disabled(busy)
+                }
+
+                if CLIInstaller.bundledCLI == nil {
+                    Caption(text: "Run from the built kefbar.app to install — the CLI ships inside the bundle.", theme: theme)
+                }
+                if let note { Caption(text: note, theme: theme) }
+
+                Rectangle().fill(theme.line).frame(height: 1).padding(.vertical, 2)
+
+                SettingRow(
+                    title: "Default step",
+                    subtitle: "Used by kefbar up / down when no step is given.",
+                    theme: theme
+                ) {
+                    ThemedStepper(value: store.cliStep, range: 1...10, theme: theme) { store.setCliStep($0) }
+                }
+
+                Text("Wire hardware keys to `kefbar up 3` / `kefbar down 3` from Logi Options+, BetterTouchTool, or Keyboard Maestro.")
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(theme.inkSoft)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(theme.inset, in: RoundedRectangle(cornerRadius: 10))
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    /// Run a privileged op off the main thread (the auth prompt blocks), then
+    /// re-read install state. A throw (including a cancelled prompt) just leaves
+    /// state unchanged with a gentle note.
+    private func run(_ op: @escaping () throws -> Void) {
+        busy = true
+        note = nil
+        Task.detached {
+            let failed: Bool
+            do { try op(); failed = false } catch { failed = true }
+            await MainActor.run {
+                busy = false
+                installed = CLIInstaller.isInstalled
+                note = failed ? "That didn't finish — you can try again." : nil
+            }
+        }
+    }
+}
+
+private struct UITab: View {
+    @ObservedObject var settings: AppSettings
+    let theme: Theme
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                SectionLabel(text: "Palette", theme: theme)
+                PaletteChooser(selection: $settings.palette, theme: theme)
+                Caption(text: "Colours from the Tailwind Oatmeal palette — a calm, near-neutral warm ramp.", theme: theme)
+
+                Rectangle().fill(theme.line).frame(height: 1).padding(.vertical, 4)
+
+                SectionLabel(text: "Appearance", theme: theme)
+                AppearanceChooser(selection: $settings.appearance, theme: theme).frame(maxWidth: 360)
+                Caption(text: "Match macOS follows your system — slipping into dark in the evening.", theme: theme)
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
+// MARK: - Rows
+
+/// One configured speaker: in-place rename / IP edit / default / remove.
 private struct ConfiguredRow: View {
     let vm: SpeakerVM
     let isDefault: Bool
+    let theme: Theme
     let onRename: (String) -> Void
     let onSetHost: (String) -> Void
     let onMakeDefault: () -> Void
@@ -99,11 +228,12 @@ private struct ConfiguredRow: View {
     @State private var name: String
     @State private var host: String
 
-    init(vm: SpeakerVM, isDefault: Bool,
+    init(vm: SpeakerVM, isDefault: Bool, theme: Theme,
          onRename: @escaping (String) -> Void, onSetHost: @escaping (String) -> Void,
          onMakeDefault: @escaping () -> Void, onRemove: @escaping () -> Void) {
         self.vm = vm
         self.isDefault = isDefault
+        self.theme = theme
         self.onRename = onRename
         self.onSetHost = onSetHost
         self.onMakeDefault = onMakeDefault
@@ -113,17 +243,232 @@ private struct ConfiguredRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 8) {
-            TextField("Name", text: $name).frame(width: 140).onSubmit { onRename(name) }
-            TextField("IP address", text: $host).frame(width: 120).onSubmit { onSetHost(host) }
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                TextField("Name", text: $name)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 13.5, weight: .semibold))
+                    .foregroundStyle(theme.ink)
+                    .tint(theme.accent2)
+                    .onSubmit { onRename(name) }
+                HStack(spacing: 6) {
+                    TextField("IP address", text: $host)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 11))
+                        .monospacedDigit()
+                        .foregroundStyle(theme.inkSoft)
+                        .tint(theme.accent2)
+                        .frame(maxWidth: 120)
+                        .onSubmit { onSetHost(host) }
+                    if !vm.model.isEmpty {
+                        Text("· \(vm.model)").font(.system(size: 11)).foregroundStyle(theme.inkFaint)
+                    }
+                }
+            }
+            Spacer(minLength: 8)
             if isDefault {
-                Text("default").font(.caption).foregroundStyle(.blue)
+                Text("Default")
+                    .font(.system(size: 10, weight: .semibold)).tracking(0.4)
+                    .foregroundStyle(theme.accentInk)
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .background(theme.accent, in: Capsule())
             } else {
-                Button("Make default") { onMakeDefault() }.font(.caption)
+                Button("Make default") { onMakeDefault() }
+                    .buttonStyle(QuietButtonStyle(theme: theme, small: true))
+            }
+            Button { onRemove() } label: {
+                Image(systemName: "trash").font(.system(size: 12)).foregroundStyle(theme.inkFaint)
+            }
+            .buttonStyle(.plain)
+            .help("Remove speaker")
+        }
+        .padding(12)
+        .background(theme.inset, in: RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(theme.line, lineWidth: 1))
+    }
+}
+
+private struct DiscoveredRow: View {
+    let d: DiscoveredSpeaker
+    let added: Bool
+    let theme: Theme
+    let onAdd: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(d.name.isEmpty ? d.model : d.name)
+                    .font(.system(size: 13, weight: .medium)).foregroundStyle(theme.ink)
+                Text("\(d.host) · \(d.model)")
+                    .font(.system(size: 11)).foregroundStyle(theme.inkFaint)
             }
             Spacer()
-            Button(role: .destructive) { onRemove() } label: { Image(systemName: "trash") }
-                .buttonStyle(.borderless)
+            if added {
+                Text("Added").font(.system(size: 12, weight: .medium)).foregroundStyle(theme.inkFaint)
+            } else {
+                Button("Add") { onAdd() }.buttonStyle(PrimaryButtonStyle(theme: theme))
+            }
         }
+        .padding(11)
+        .background(theme.inset, in: RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(theme.line, lineWidth: 1))
+    }
+}
+
+// MARK: - Themed controls
+
+private struct SectionLabel: View {
+    let text: String
+    let theme: Theme
+    var body: some View {
+        Text(text.uppercased())
+            .font(.system(size: 11, weight: .semibold)).tracking(1.3)
+            .foregroundStyle(theme.inkFaint)
+    }
+}
+
+private struct Caption: View {
+    let text: String
+    let theme: Theme
+    var body: some View {
+        Text(text).font(.system(size: 11.5)).foregroundStyle(theme.inkFaint)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+private struct SettingRow<Trailing: View>: View {
+    let title: String
+    let subtitle: String
+    let theme: Theme
+    @ViewBuilder let trailing: () -> Trailing
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 14) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(.system(size: 13.5, weight: .medium)).foregroundStyle(theme.ink)
+                Text(subtitle).font(.system(size: 11.5)).foregroundStyle(theme.inkFaint)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 12)
+            trailing()
+        }
+        .padding(.vertical, 6)
+    }
+}
+
+private struct ThemedStepper: View {
+    let value: Int
+    let range: ClosedRange<Int>
+    let theme: Theme
+    let onChange: (Int) -> Void
+
+    var body: some View {
+        HStack(spacing: 0) {
+            button("minus", enabled: value > range.lowerBound) { onChange(value - 1) }
+            Text("\(value)")
+                .font(.system(size: 14, weight: .semibold)).monospacedDigit()
+                .foregroundStyle(theme.ink)
+                .frame(minWidth: 42, minHeight: 28)
+                .background(theme.panel)
+                .overlay(Rectangle().fill(theme.line).frame(width: 1), alignment: .leading)
+                .overlay(Rectangle().fill(theme.line).frame(width: 1), alignment: .trailing)
+            button("plus", enabled: value < range.upperBound) { onChange(value + 1) }
+        }
+        .background(theme.inset)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(theme.lineStrong, lineWidth: 1))
+    }
+
+    private func button(_ symbol: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol).font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(enabled ? theme.ink : theme.inkFaint)
+                .frame(width: 32, height: 28)
+        }
+        .buttonStyle(.plain).disabled(!enabled)
+    }
+}
+
+private struct PaletteChooser: View {
+    @Binding var selection: Palette
+    let theme: Theme
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(Palette.allCases) { p in
+                let selected = p == selection
+                Button { selection = p } label: {
+                    HStack(spacing: 8) {
+                        Circle().fill(swatch(p)).frame(width: 14, height: 14)
+                            .overlay(Circle().strokeBorder(.black.opacity(0.12), lineWidth: 1))
+                        Text(p.label)
+                            .font(.system(size: 12.5, weight: .medium))
+                            .foregroundStyle(selected ? theme.ink : theme.inkSoft)
+                    }
+                    .padding(.horizontal, 12).padding(.vertical, 8)
+                    .background(selected ? theme.inset : .clear, in: Capsule())
+                    .overlay(Capsule().strokeBorder(selected ? theme.accent : theme.lineStrong, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func swatch(_ p: Palette) -> Color {
+        let s = p.ramp[5]
+        return Color(oklchL: s.l, c: s.c, h: s.h)
+    }
+}
+
+private struct AppearanceChooser: View {
+    @Binding var selection: AppearanceMode
+    let theme: Theme
+
+    var body: some View {
+        HStack(spacing: 3) {
+            ForEach(AppearanceMode.allCases) { m in
+                let selected = m == selection
+                Button { selection = m } label: {
+                    Text(m.label)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(selected ? theme.ink : theme.inkSoft)
+                        .padding(.vertical, 7)
+                        .frame(maxWidth: .infinity)
+                        .background(selected ? theme.panel : .clear, in: RoundedRectangle(cornerRadius: 7))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(3)
+        .background(theme.inset, in: RoundedRectangle(cornerRadius: 9))
+        .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(theme.line, lineWidth: 1))
+    }
+}
+
+// MARK: - Button styles
+
+struct PrimaryButtonStyle: ButtonStyle {
+    let theme: Theme
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(theme.accentInk)
+            .padding(.horizontal, 15).padding(.vertical, 8)
+            .background(theme.accent, in: RoundedRectangle(cornerRadius: 8))
+            .opacity(configuration.isPressed ? 0.8 : 1)
+    }
+}
+
+struct QuietButtonStyle: ButtonStyle {
+    let theme: Theme
+    var small = false
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: small ? 12 : 13, weight: .medium))
+            .foregroundStyle(theme.inkSoft)
+            .padding(.horizontal, small ? 11 : 14).padding(.vertical, small ? 6 : 8)
+            .background(theme.inset, in: RoundedRectangle(cornerRadius: 8))
+            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(theme.lineStrong, lineWidth: 1))
+            .opacity(configuration.isPressed ? 0.7 : 1)
     }
 }

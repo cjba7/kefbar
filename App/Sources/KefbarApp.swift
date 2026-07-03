@@ -6,7 +6,8 @@
 import SwiftUI
 
 /// kefbar menu-bar app (SPEC §9). Agent by default (LSUIElement in Info.plist);
-/// a `MenuBarExtra` window scene plus a `Settings` scene, sharing one `SpeakerStore`.
+/// a `MenuBarExtra` window scene plus a resizable `Settings` scene, sharing one
+/// `SpeakerStore` and `AppSettings`. Both scenes honour the chosen appearance.
 @main
 struct KefbarApp: App {
     @StateObject private var store = SpeakerStore()
@@ -14,12 +15,15 @@ struct KefbarApp: App {
 
     var body: some Scene {
         MenuBarExtra("kefbar", systemImage: "speaker.wave.2") {
-            MenuContentView(store: store)
+            MenuContentView(store: store, settings: settings)
+                .preferredColorScheme(settings.appearance.colorScheme)
         }
         .menuBarExtraStyle(.window)
 
         Settings {
             SettingsView(store: store, settings: settings)
+                .preferredColorScheme(settings.appearance.colorScheme)
         }
+        .windowResizability(.contentMinSize)
     }
 }

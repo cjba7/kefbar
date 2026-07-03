@@ -120,6 +120,7 @@ final class SpeakerVM: ObservableObject, Identifiable {
     nonisolated let id: String
     let name: String
     let host: String
+    let model: String
     let maxVolume: Int
 
     @Published var volume: Double = 0
@@ -139,6 +140,7 @@ final class SpeakerVM: ObservableObject, Identifiable {
         id = speaker.id
         name = speaker.name
         host = speaker.host
+        model = speaker.model ?? ""
         maxVolume = speaker.maxVolume
         client = KEFClient(host: speaker.host)
     }

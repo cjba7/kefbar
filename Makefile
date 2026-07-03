@@ -62,10 +62,13 @@ uninstall:
 APP_BUNDLE := build/kefbar.app
 app:
 	swift build -c release --product KefbarApp
+	swift build -c release --product kefbar
 	rm -rf "$(APP_BUNDLE)"
-	mkdir -p "$(APP_BUNDLE)/Contents/MacOS" "$(APP_BUNDLE)/Contents/Resources"
+	mkdir -p "$(APP_BUNDLE)/Contents/MacOS" "$(APP_BUNDLE)/Contents/Resources" "$(APP_BUNDLE)/Contents/Helpers"
 	cp .build/release/KefbarApp "$(APP_BUNDLE)/Contents/MacOS/KefbarApp"
+	cp .build/release/kefbar "$(APP_BUNDLE)/Contents/Helpers/kefbar"
 	cp App/Resources/Info.plist "$(APP_BUNDLE)/Contents/Info.plist"
+	codesign --force --sign "$(SIGN_IDENTITY)" "$(APP_BUNDLE)/Contents/Helpers/kefbar"
 	codesign --force --sign "$(SIGN_IDENTITY)" "$(APP_BUNDLE)"
 	@echo "built $(APP_BUNDLE) — launch with: open $(APP_BUNDLE)"
 
