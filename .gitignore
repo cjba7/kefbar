@@ -1,0 +1,19 @@
+# Swift / SwiftPM
+.build/
+.swiftpm/
+Package.resolved
+
+# Built app bundle (make app)
+build/
+
+# Xcode
+DerivedData/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+
+# Python (mock server)
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store
