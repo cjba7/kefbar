@@ -65,22 +65,12 @@ struct MenuContentView: View {
         }
     }
 
-    // SettingsLink under a custom button style swallows its action, and the
-    // showSettingsWindow: selector doesn't open the SwiftUI Settings scene on
-    // recent macOS (it only activates us — which just blurs the previous window).
-    // So on macOS 14+ call the openSettings action — SettingsLink's own mechanism,
-    // which worked before the redesign — from a plain Button (a custom style is
-    // safe on a plain Button, as Quit shows).
-    @ViewBuilder private var settingsButton: some View {
-        if #available(macOS 14, *) {
-            ModernSettingsButton(theme: theme)
-        } else {
-            Button("Settings…") {
-                NSApp.activate(ignoringOtherApps: true)
-                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-            }
-            .buttonStyle(GhostButtonStyle(theme: theme))
+    // Opens our own resizable settings window (SettingsWindowController).
+    private var settingsButton: some View {
+        Button("Settings…") {
+            SettingsWindowController.shared.show(store: store, settings: settings)
         }
+        .buttonStyle(GhostButtonStyle(theme: theme))
     }
 }
 
@@ -161,23 +151,5 @@ struct SpeakerRowView: View {
         }
         .buttonStyle(.plain)
         .help(vm.muted ? "Unmute" : "Mute")
-    }
-}
-
-/// The Settings button for macOS 14+, using the `openSettings` environment action
-/// (the same mechanism `SettingsLink` uses) so it reliably opens the scene while
-/// keeping our custom button style. Activating first brings the window to the
-/// front for an agent app.
-@available(macOS 14, *)
-private struct ModernSettingsButton: View {
-    let theme: Theme
-    @Environment(\.openSettings) private var openSettings
-
-    var body: some View {
-        Button("Settings…") {
-            NSApp.activate(ignoringOtherApps: true)
-            openSettings()
-        }
-        .buttonStyle(GhostButtonStyle(theme: theme))
     }
 }

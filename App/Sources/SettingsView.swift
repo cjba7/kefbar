@@ -3,7 +3,6 @@
 //
 // This file is part of kefbar.
 
-import AppKit
 import KEFKit
 import SwiftUI
 
@@ -27,13 +26,8 @@ struct SettingsView: View {
             Rectangle().fill(theme.line).frame(height: 1)
             content.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
-        .frame(minWidth: 380, idealWidth: 500, maxWidth: .infinity,
-               minHeight: 280, idealHeight: 460, maxHeight: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(theme.ground)
-        .background(SettingsWindowConfigurator(
-            minSize: CGSize(width: 380, height: 280),
-            defaultSize: CGSize(width: 500, height: 460),
-            title: "kefbar Settings"))
     }
 
     @ViewBuilder private var content: some View {
@@ -98,40 +92,6 @@ private struct SettingsTabBar: View {
         .padding(.top, 6)
         .background(theme.panel)
     }
-}
-
-/// Reaches the hosting NSWindow to make the Settings window resizable with a
-/// minimum size — SwiftUI's Settings scene otherwise ships fixed-size — and set
-/// its title (the custom tab bar replaces the TabView that used to title it).
-private struct SettingsWindowConfigurator: NSViewRepresentable {
-    let minSize: CGSize
-    let defaultSize: CGSize
-    let title: String
-
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView(frame: .zero)
-        func configure() {
-            guard let window = view.window else { return }
-            window.styleMask.insert(.resizable)
-            window.minSize = minSize
-            window.title = title
-        }
-        DispatchQueue.main.async {
-            configure()
-            if !context.coordinator.sized, let window = view.window {
-                context.coordinator.sized = true
-                window.setContentSize(defaultSize)
-            }
-        }
-        // SwiftUI re-applies its own style mask as the Settings window finishes
-        // setting up, stripping .resizable; re-assert it just after so it sticks.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { configure() }
-        return view
-    }
-
-    func updateNSView(_ nsView: NSView, context: Context) {}
-    func makeCoordinator() -> Coordinator { Coordinator() }
-    final class Coordinator { var sized = false }
 }
 
 // MARK: - Tabs

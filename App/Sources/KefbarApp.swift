@@ -19,11 +19,8 @@ struct KefbarApp: App {
                 .preferredColorScheme(settings.appearance.colorScheme)
         }
         .menuBarExtraStyle(.window)
-
-        Settings {
-            SettingsView(store: store, settings: settings)
-                .preferredColorScheme(settings.appearance.colorScheme)
-        }
-        .windowResizability(.contentSize)
+        // Settings is a plain, resizable NSWindow managed by
+        // SettingsWindowController (opened from the menu) rather than a SwiftUI
+        // Settings scene, which ships fixed-size and resists being made resizable.
     }
 }
