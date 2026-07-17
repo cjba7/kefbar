@@ -6,7 +6,36 @@ wireless speakers (LSX II, LSX II LT, LS50 Wireless II, LS60 Wireless) from the
 menu bar and the command line. No cloud, no KEF Connect app, no remote — just the
 speaker's own local HTTP API on your LAN.
 
+<p align="center">
+  <img src="docs/images/menubar.png" alt="kefbar menu-bar popover: a Living Room LSX II speaker at volume 50 of 100 with a slider, a mute button, and Settings and Quit actions" width="420">
+</p>
+
 See [`SPEC.md`](SPEC.md) for the full design.
+
+<details>
+<summary><b>Settings screenshots</b> (Speakers, General, CLI, Appearance)</summary>
+
+<br>
+
+**Speakers** - configured speakers are keyed by MAC, and Rescan finds KEF speakers on your LAN.
+
+<img src="docs/images/settings-speakers.png" alt="Settings, Speakers tab: a configured Living Room LSX II at 192.168.1.114 marked Default, above a Discovered section with a Rescan button" width="560">
+
+**General** - launch kefbar automatically when you sign in.
+
+<img src="docs/images/settings-general.png" alt="Settings, General tab: a Launch at login toggle under a Startup heading" width="560">
+
+**CLI** - install the bundled `kefbar` tool into your PATH and set the default volume step for `up` / `down`.
+
+<img src="docs/images/settings-cli.png" alt="Settings, CLI tab: an Install CLI button that links the bundled tool into /usr/local/bin, and a Default step stepper set to 5" width="560">
+
+**Appearance** - four palettes (Lavender, Dark Olive, Sea Grey, Brown Olive) plus Match macOS, Light, or Dark. Shown here in both light and dark:
+
+| Light | Dark |
+|:---:|:---:|
+| <img src="docs/images/settings-ui-light.png" alt="Settings, UI tab in light mode: palette chips and a Match macOS / Light / Dark appearance switch" width="380"> | <img src="docs/images/settings-ui-dark.png" alt="Settings, UI tab in dark mode: the same palette chips and appearance switch, in dark" width="380"> |
+
+</details>
 
 ## Status
 
